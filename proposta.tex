@@ -69,17 +69,17 @@
 Parallelizing GCC with Threads
 \vspace{0.5cm}
 \end{center}
-\tiny{\ }
-\begin{figure}[ht]
+\vspace*{\fill}
+{
      \centering
-     \includegraphics[scale=1.]{logo.pdf}
-     \label{fig:logo}
-\end{figure}
-\vspace*{\fill} \\
+     \includegraphics[scale=0.7]{logo.pdf}
+    \par
+}
+\vspace*{\fill}
 \normalsize{
-\textcolor{darkgreen}{Giuliano Belinassi} \\
+\noindent\textcolor{darkgreen}{Giuliano Belinassi} \\
 University of São Paulo -- Brazil \\
-IRC: giulianob \\
+IRC: giulianob in \#gcc \\
 Email: \href{mailto:giuliano.belinassi@usp.br}{\texttt{giuliano.belinassi@usp.br}} \\
 Github: \url{https://github.com/giulianobelinassi/} \\
 Date: \today
@@ -90,22 +90,24 @@ Date: \today
     Currently pursuing a Master's Degree in Computer Science at the University
     of São Paulo with a Computer Science Bachelor's degree in the same
     institution. I've always been fascinated by topics such as
-    High-Performance Computing and Code Optimization, and I am currently
-    researching topics in compiler
-    parallelization. Therefore, I am applying to the GNU Compiler Collections
+    High-Performance Computing and Code Optimization, having worked with
+    a parallel implementation of a Boundary Elements Method software in GPU,
+    and I am currently
+    conducting research in compiler parallelization. Therefore, I am applying
+    to the GNU Compiler Collections
     (GCC) both as a research project in parallelization of compilers, and
     mainly to become a part of the free software community.
 
-    \textbf{Skills}: Strong knowledge in C, Vim, and command line utilities (grep, sed, ...)
+    \textbf{Skills}: Strong knowledge in C, Concurrency, Shared Memory Parallelism, Vim, and command line utilities (grep, sed, ...)
 \end{section}
 
 \begin{subsection}{Contributions to GCC}
 
 I've submitted some patches, mainly adding inline optimizations to
-trigonometric functions. These patches required deep testing to guarantee
+trigonometric functions. These kind of patches requires deep testing to guarantee
 that the optimization did not yield severely incorrect results, which
-concluded in a blogpost about the patch \textit{Optimize $\sin (\arctan (x))$}.
-I did this blogpost both to register how to add these new kinds of optimizations,
+concluded in a blog post about the patch \textit{Optimize $\sin (\arctan (x))$}.
+I did this blog post both to register how to add these new kinds of optimizations,
 and also to encourage newcomers to contribute to GCC.
 
 \begin{table}[!htbp]
@@ -125,17 +127,20 @@ Name                                                                            
 \end{subsection}
 
 \begin{section}{Paralelization Project}
-
-Even before Google released the list of GSoC accepted organizations, I started
-discussing this project in the mailing
-list\footnote{\url{https://gcc.gnu.org/ml/gcc/2018-11/msg00073.html}}. Having worked
-with parallelism before and having an interest in working with compilers, I got
-interested in this project.
+While looking for topics in compiler's field that touched subjects that I
+am interested in for the subject of my master's thesis, I found this
+parallelization project in GSoC 2018. With this in mind, I started a
+discussion in the mailing list to understand what this project is about,
+which was parallelizing the GCC internals to be able to compile big files
+faster, which got my
+interest\footnote{\url{https://gcc.gnu.org/ml/gcc/2018-11/msg00073.html}}.
+This was way before the list of GSoC accepted organizations.
 
 As stated in PR84402\footnote{\url{https://gcc.gnu.org/bugzilla/show\_bug.cgi?id=84402}},
 there is a parallelism bottleneck in GCC concerning huge files, with hundreds of
-thousends of lines of code. Further discussion in the mailing list made
-Bin Cheng\footnote{\url{https://gcc.gnu.org/ml/gcc/2018-12/msg00079.html}} report that
+thousands of lines of code. In the course of the discussion,
+Bin Cheng\footnote{\url{https://gcc.gnu.org/ml/gcc/2018-12/msg00079.html}}
+reported that
 he is facing a similar issue with his project, stating that parallelizing the
 compiler may solve his problem. These topics supports the interest in the
 community for this project.
@@ -143,15 +148,20 @@ community for this project.
 \end{section}
 
 \begin{subsection}{Current Status}
-I already developed a way to measure the effectiveness of the parallel implementation.
-First, I developed a tool to collect and analyze the compilation time of GCC, with
-support to the GCC bootstrap, and a script to plot the timing data; as available
-in \footnote{\url{https://github.com/giulianobelinassi/gcc-timer-analysis}}.
-I have access to a 64 cores Opteron machine to run the tests, and I managed to
-    reproduce the PR84402 bottleneck in it, as illustrated in Figure \ref{fig:analysis}.
-I am also using the generated \texttt{gimple-match.c} file in order to measure the elapsed
-time of a single file.
+in PR84402, Martin Liška posted a graphic showing the existence of
+parallelism bottleneck in GCC compilation due to huge files such as
+\texttt{gimple-match.c} in a 128-cores machine. He also posted a amazing patch to
+GNU Make to collect the data and a script to plot the graphic, which I used
+to reproduce the same behaviour in a 64-cores machine that is available in
+my university.
 
+Unfortunately, I found this approach not easy to reproduce, as
+it requires compiling and installing a custom version of Make, generated
+gigabytes of data which requires parsing by a script that often crashed due
+to a very large SVG. With this in mind, I created a set of
+tools\footnote{\url{https://github.com/giulianobelinassi/gcc-timer-analysis}}
+using a complete distinct approach, generating less data, is more stable, and
+plotted better graphics, such as the one in Figure \ref{fig:analysis}.
 
 I also explored the GCC codebase in order to find the performance bottleneck for
 such huge files. Analyzing the most time-consuming file in GCC's project
@@ -164,7 +174,7 @@ this part of the compilation, as it seems possible because I've already made GCC
 functions in reverse orders.
 
 Furthermore, I am also studying the theoretical background behind \texttt{GIMPLE},
-and \texttt{cgraphs}. I have read the GIMPLE
+    and \texttt{cgraphs}. I have read the \texttt{GIMPLE}
 documentation\footnote{\url{https://gcc.gnu.org/onlinedocs/gccint/}}, and
 I am looking for how \texttt{cgraph} works internally, both in theory and in
 GCC.
@@ -178,15 +188,16 @@ will be provided as I proceed into the project. These topics are:
 \begin{enumerate}
     \item \textit{Document the global variables and states}. The \texttt{cgraph}
 clearly was not implemented with this kind of parallelism in mind, as it has a lot
-of global states (i. e., RTL initialization, possible node dependency,
-Garbage Collector, ...). This has to be transformed into something that could
-be handled locally, or insert locks.
+of global states (i.e., RTL initialization, possible node dependency,
+Garbage Collector, ...). This has to be rewritten into something that could
+be handled locally for each thread, or insert locks.
 	\item \textit{Develop a parallel prototype}. GCC supports a lot of systems
 with different threading schemes. Discussion in the mailing list suggested the
 use of pthreads and C++11 threads, however, this may not be the easiest way to
-develop parallel software.
+develop parallel software and I may use OpenMP to accelerate the development.
 	\item \textit{Refactor the parallel prototype}. Here the aim is to improve
-the previous implementation with proper cross-platform support.
+the previous implementation with proper cross-platform support, and remove any
+OpenMP code.
 \end{enumerate}
 
 
