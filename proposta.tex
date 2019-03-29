@@ -7,9 +7,9 @@
 
 %\usepackage[brazilian]{babel}
 \usepackage[utf8]{inputenc}
+%\usepackage{textcomp}
 \usepackage[T1]{fontenc}
-\usepackage{textcomp}
-\usepackage[T1]{fontenc}
+\usepackage{lmodern}
 %----------------------------
 
 \setlength{\topmargin}{-.5in}
@@ -88,27 +88,26 @@ Date: \today
 \newpage
 
 \begin{section}{About Me}
-    Currently pursuing a Master's Degree in Computer Science at the University
-    of São Paulo with a Computer Science Bachelor's degree in the same
+    Computer Science Bachelor (University of São Paulo), 
+    currently pursuing a Masters Degree in Computer Science at the same
     institution. I've always been fascinated by topics such as
     High-Performance Computing and Code Optimization, having worked with
-    a parallel implementation of a Boundary Elements Method software in GPU,
-    and I am currently
-    conducting research in compiler parallelization. Therefore, I am applying
-    to the GNU Compiler Collections
-    (GCC) both as a research project in parallelization of compilers, and
-    mainly to become a part of the free software community.
+    a parallel implementation of a Boundary Elements Method software in GPU.
+    I am currently conducting research on compiler parallelization and,
+    therefore, a GSoC internship working with the GNU
+    Compiler Collection (GCC) on a related topic is an excellent opportunity
+    for me to become more involved with the Free Software community.
 
-    \textbf{Skills}: Strong knowledge in C, Concurrency, Shared Memory Parallelism, Vim, and command line utilities (grep, sed, ...)
+    \textbf{Skills}: Strong knowledge in C, Concurrency, Shared Memory Parallelism, command line utilities (grep, sed\dots) and other typical programming tools.
 \end{section}
 
 \begin{subsection}{Contributions to GCC}
 
 I've submitted some patches, mainly adding inline optimizations to
-trigonometric functions. These kind of patches requires deep testing to guarantee
-that the optimization did not yield severely incorrect results, which
-concluded in a blog post about the patch \textit{Optimize $\sin (\arctan (x))$}.
-I did this blog post both to register how to add these new kinds of optimizations,
+trigonometric functions. This kind of patch requires exaustive testing to guarantee
+that the optimization does not yield severely incorrect results. This work
+resulted in a blog post about the patch \textit{Optimize sin(arctan(x))}.
+I did this blog post both to register how to add this kind of optimization
 and also to encourage newcomers to contribute to GCC.
 
 \begin{table}[!htbp]
@@ -127,63 +126,63 @@ Name                                                                            
 
 \end{subsection}
 
-\begin{section}{Paralelization Project}
-While looking for topics in compiler's field that touched subjects that I
-am interested in for the subject of my master's thesis, I found this
+\begin{section}{Parallelization Project}
+While looking for topics in the compiler field that touched subjects that I
+am interested in for the subject of my masters thesis, I found a
 parallelization project in GSoC 2018. With this in mind, I started a
-discussion in the mailing list to understand what this project is about,
-which was parallelizing the GCC internals to be able to compile big files
-faster, which got my
-interest\footnote{\url{https://gcc.gnu.org/ml/gcc/2018-11/msg00073.html}}.
-This was way before the list of GSoC accepted organizations.
+discussion in the mailing list to understand what that project is about,
+which was parallelizing GCC internals to be able to compile big files
+faster\footnote{\url{https://gcc.gnu.org/ml/gcc/2018-11/msg00073.html}}.
+This was way before the list of GSoC accepted organizations was made public.
 
 As stated in PR84402\footnote{\url{https://gcc.gnu.org/bugzilla/show\_bug.cgi?id=84402}},
-there is a parallelism bottleneck in GCC concerning huge files, with hundreds of
-thousands of lines of code. In the course of the discussion,
+there is a parallelism bottleneck in GCC concerning huge files (with hundreds of
+thousands of lines of code). In the course of the discussion,
 Bin Cheng\footnote{\url{https://gcc.gnu.org/ml/gcc/2018-12/msg00079.html}}
 reported that
-he is facing a similar issue with his project, stating that parallelizing the
-compiler may solve his problem. These topics supports the interest in the
-community for this project.
-
-\end{section}
+he is affected by this issue, stating that parallelizing the
+compiler may solve his problem. These discussions demonstrate the
+community interest in this project.
 
 \begin{subsection}{Current Status}
-in PR84402, Martin Liška posted a graphic showing the existence of
+In PR84402, Martin Liška posted a graphic showing the existence of a
 parallelism bottleneck in GCC compilation due to huge files such as
-\texttt{gimple-match.c} in a 128-cores machine. He also posted a amazing patch to
+\texttt{gimple-match.c} in a 128-cores machine that \texttt{make -j128} alone could not alleviate. He also posted an amazing patch to
 GNU Make to collect the data and a script to plot the graphic, which I used
-to reproduce the same behaviour in a 64-cores machine that is available in
+to reproduce the same behaviour in a 64-cores machine that is available at
 my university.
 
 Unfortunately, I found this approach not easy to reproduce, as
-it requires compiling and installing a custom version of Make, generated
-gigabytes of data which requires parsing by a script that often crashed due
-to a very large SVG. With this in mind, I created a set of
+it requires compiling and installing a custom version of Make and generates
+gigabytes of data which require parsing by a script that often crashes, as
+it struggles to generate a very large SVG. With this in mind, I created a set of
 tools\footnote{\url{https://github.com/giulianobelinassi/gcc-timer-analysis}}
-using a complete distinct approach, generating less data, is more stable, and
-plotted better graphics, such as the one in Figure \ref{fig:analysis}.
+using a completely distinct approach, which generates less data, is more stable, and
+plots better graphics, such as the one in Figure \ref{fig:analysis}.
 
 I also explored the GCC codebase in order to find the performance bottleneck for
-such huge files. Analyzing the most time-consuming file in GCC's project
-(\texttt{gimple-match.c}), I found that the method
+such huge files. I compiled GCC with the
+\texttt{--disable-checking} and \texttt{-O2} flags, which
+give a more performant (but less reliable) compiler and used this version to compile
+\texttt{gimple-match.c} (the largest file in GCC). In this context, I found that the method
 \texttt{finalize\_compilation\_unit} of
-class \texttt{symbol\_table} takes around $50s$ to compile with a
-\texttt{--disable-checking} GCC under \texttt{-O2}, with the \texttt{expand\_all\_functions}
-routine taking most of this time.
+class \texttt{symbol\_table} takes around $50s$ of the compilation time, with the
+\texttt{expand\_all\_functions}
+routine taking most of it. Therefore, this routine is a strong candidate for parallelization.
 
-    Currently, my strategy to parallelize
-\texttt{expand\_all\_functions} is to make \texttt{GIMPLE}
-passes per function parallel, as suggested by Richard Biener
-\footnote{https://gcc.gnu.org/ml/gcc/2019-03/msg00249.html}. However, there is also
-a pipelined alternative, where the functions are fed into a
-\texttt{GIMPLE} passes pipeline, which then processes the functions.
+Currently, my strategy to parallelize \texttt{expand\_all\_functions} is to
+perform the \texttt{GIMPLE} processing step in parallel, as suggested
+by Richard Biener\footnote{\url{https://gcc.gnu.org/ml/gcc/2019-03/msg00249.html}}: each
+function may be independently processed by the many passes of
+\texttt{GIMPLE}.  There is also a pipelined alternative: a distinct
+thread is responsible for a given \texttt{GIMPLE} pass and each
+function is fed sequentially to each of them. This allows many
+functions to be processed simultaneously, each by a different pass.
 
-
-Furthermore, I am also studying the theoretical background behind \texttt{GIMPLE},
+Furthermore, I am also studying the theoretical background behind \texttt{GIMPLE}
 and \texttt{cgraphs}. I have read the \texttt{GIMPLE}
-documentation\footnote{\url{https://gcc.gnu.org/onlinedocs/gccint/}}, and
-I am looking for how \texttt{cgraph} works internally, both in theory and in
+documentation\footnote{\url{https://gcc.gnu.org/onlinedocs/gccint/}} and
+I am looking at how \texttt{cgraph} works internally, both in theory and within
 GCC.
 
 \end{subsection}
@@ -193,34 +192,31 @@ GCC.
 I plan to use the GSoC time to develop the following topics:
 
 \begin{itemize}
- \item{Week [1, 7] - May 6 to June 21:} \\
-Here I expect to deliver the refactored version
-of \texttt{cgraph\_node::expand()} and \texttt{expand\_all\_functions},
-splitting \texttt{IPA}, \texttt{GIMPLE} and \texttt{RTL} passes, plus
-some documentation about the global states of the \texttt{GIMPLE}
-passes.
- \item{Week 8 - June 24 to 28:} \textbf{First Evaluation} \\
-Here I expect to deliver the refactored version of
-\texttt{cgraph\_node::expand()} and \texttt{expand\_all\_functions},
-plus some documentation about the global states of the \texttt{GIMPLE} passes.
- \item{Week [9, 11] - July 1 to 19:} \\
- Continue the documentation and refactor of the \texttt{GIMPLE} passes.
- \item{Week 12 - July 22 to 26:} \\
-Attendance to Debconf 19 (Curitiba, Brazil). Please let me know
+ \item{Week [1, 6] -- May 6 to June 14:} \\
+Refactor \texttt{cgraph\_node::expand()} and
+\texttt{expand\_all\_functions}, splitting \texttt{IPA},
+\texttt{GIMPLE} and \texttt{RTL} passes, and some documentation about
+the global states of the \texttt{GIMPLE} passes.
+ \item{Week 8 -- June 24 to 28:} \textbf{First Evaluation} \\
+Deliver the refactored version of \texttt{cgraph\_node::expand()} and
+\texttt{expand\_all\_functions}, and the partial documentation
+with regard to \texttt{GIMPLE}
+ \item{Week [9, 11] -- July 1 to 19:} \\
+Continue documentating and refactoring the \texttt{GIMPLE} passes.
+ \item{Week 12 --- July 22 to 26:} \\
+Attend to Debconf 19 (Curitiba, Brazil). Please let me know
 if someone else from GCC will attend.
- \item{Week 12 - July 22 to 26:} \textbf{Second Evaluation}\\
-Here I expect to deliver a
-working non-optimized parallel version of \texttt{expand\_all\_functions}.
-Here the point is not to perform better than the sequential version,
-but to still be correct in a multi-threaded environment.
-\item{Week [13, 15] - July 29 to August 19:} \\
+ \item{Week 12 --- July 22 to 26:} \textbf{Second Evaluation}\\
+Deliver a
+working non-optimized parallel version of \texttt{expand\_all\_functions}
+with the point of being correct in a multi-threaded environment.
+\item{Week [13, 15] --- July 29 to August 16:} \\
 Iteractively improve the current implementation.
+% TODO AEEEEEE!!!
 \item{Week 16 - August 19:} \textbf{Final evaluation}\\
-Here I expect to have a
-better-optimized version of the function, with speedup over the sequential
-version when compiling \texttt{gimple-match.c} and reducing the total compilation time
-in \texttt{GCC} compilation without bootstrap.
-
+Optimize the current implementation, so that there is a speedup over
+the sequential version when compiling \texttt{gimple-match.c} and reducing the
+total compilation time in \texttt{GCC} compilation without bootstrap.
 \end{itemize}
 
 \begin{figure}[ht]
@@ -232,4 +228,5 @@ in \texttt{GCC} compilation without bootstrap.
 
 \end{subsection}
 
+\end{section}
 \end{document}
