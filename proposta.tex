@@ -78,6 +78,7 @@ Parallelizing GCC with Threads
 \vspace*{\fill}
 \normalsize{
 \noindent\textcolor{darkgreen}{Giuliano Belinassi} \\
+Timezone: GMT$-$3:00 \\
 University of São Paulo -- Brazil \\
 IRC: giulianob in \#gcc \\
 Email: \href{mailto:giuliano.belinassi@usp.br}{\texttt{giuliano.belinassi@usp.br}} \\
@@ -106,8 +107,7 @@ Date: \today
 I've submitted some patches, mainly adding inline optimizations to
 trigonometric functions. These kind of patches requires deep testing to guarantee
 that the optimization did not yield severely incorrect results, which
-concluded in a blog post about the patch \textit{Optimize $\sin (\arctan (x))$}
-\footnote{https://flusp.ime.usp.br/updates/2019/03/26/making-gcc-optimize-some-trigonometric-functions/}.
+concluded in a blog post about the patch \textit{Optimize $\sin (\arctan (x))$}.
 I did this blog post both to register how to add these new kinds of optimizations,
 and also to encourage newcomers to contribute to GCC.
 
@@ -119,7 +119,7 @@ Name                                                                            
     \href{https://patchwork.ozlabs.org/patch/981596/}{Optimize $\sin (\arctan (x))$}      & \color{darkgreen}{\texttt{Accepted}} \\ \hline
     \href{https://patchwork.ozlabs.org/patch/1003988/}{Optimize $\sinh (\text{arctanh} (x))$}   & \color{darkgreen}{\texttt{Accepted}} \\ \hline
     \href{https://patchwork.ozlabs.org/patch/961362/}{Fix typo 'exapnded'}                & \color{darkgreen}{\texttt{Accepted}} \\ \hline
-    \href{https://en.wikibooks.org/wiki/LaTeX/Hyperlinks}{Split 'opt and gen' variable}   & \color{yelloworange}{\texttt{Working}} \\ \hline
+    \href{https://en.wikibooks.org/wiki/LaTeX/Hyperlinks}{Split 'opt and gen' variable}   & \color{yelloworange}{\texttt{Working on}} \\ \hline
     \href{https://patchwork.ozlabs.org/patch/1023211/}{Update $\sin (\arctan (x))$ test}  & \color{yelloworange}{\texttt{Waiting Stage1}} \\ \hline
     \href{https://patchwork.ozlabs.org/patch/1046302/}{Fix PR89437}                           & Wilco Dijkstra version accepted \\ \hline
 \end{tabular}
@@ -127,7 +127,7 @@ Name                                                                            
 
 \end{subsection}
 
-\begin{section}{Parallelization Project}
+\begin{section}{Paralelization Project}
 While looking for topics in compiler's field that touched subjects that I
 am interested in for the subject of my master's thesis, I found this
 parallelization project in GSoC 2018. With this in mind, I started a
@@ -168,14 +168,20 @@ I also explored the GCC codebase in order to find the performance bottleneck for
 such huge files. Analyzing the most time-consuming file in GCC's project
 (\texttt{gimple-match.c}), I found that the method
 \texttt{finalize\_compilation\_unit} of
-class \texttt{symbol\_table} takes around 50s to compile with a
+class \texttt{symbol\_table} takes around $50s$ to compile with a
 \texttt{--disable-checking} GCC under \texttt{-O2}, with the \texttt{expand\_all\_functions}
-routine taking most of this time. Currently, my strategy is to try to parallelize
-this part of the compilation, as it seems possible because I've already made GCC output
-functions in reverse orders.
+routine taking most of this time.
+
+    Currently, my strategy to parallelize
+\texttt{expand\_all\_functions} is to make \texttt{GIMPLE}
+passes per function parallel, as suggested by Richard Biener
+\footnote{https://gcc.gnu.org/ml/gcc/2019-03/msg00249.html}. However, there is also
+a pipelined alternative, where the functions are fed into a
+\texttt{GIMPLE} passes pipeline, which then processes the functions.
+
 
 Furthermore, I am also studying the theoretical background behind \texttt{GIMPLE},
-    and \texttt{cgraphs}. I have read the \texttt{GIMPLE}
+and \texttt{cgraphs}. I have read the \texttt{GIMPLE}
 documentation\footnote{\url{https://gcc.gnu.org/onlinedocs/gccint/}}, and
 I am looking for how \texttt{cgraph} works internally, both in theory and in
 GCC.
@@ -183,24 +189,39 @@ GCC.
 \end{subsection}
 
 \begin{subsection}{Planned Tasks}
-    Currently, my plan consists in three high-level topics, but more details
-will be provided as I proceed into the project. These topics are:
 
-\begin{enumerate}
-    \item \textit{Document the global variables and states}. The \texttt{cgraph}
-clearly was not implemented with this kind of parallelism in mind, as it has a lot
-of global states (i.e., RTL initialization, possible node dependency,
-Garbage Collector, ...). This has to be rewritten into something that could
-be handled locally for each thread, or insert locks.
-	\item \textit{Develop a parallel prototype}. GCC supports a lot of systems
-with different threading schemes. Discussion in the mailing list suggested the
-use of pthreads and C++11 threads, however, this may not be the easiest way to
-develop parallel software and I may use OpenMP to accelerate the development.
-	\item \textit{Refactor the parallel prototype}. Here the aim is to improve
-the previous implementation with proper cross-platform support, and remove any
-OpenMP code.
-\end{enumerate}
+I plan to use the GSoC time to develop the following topics:
 
+\begin{itemize}
+ \item{Week [1, 7] - May 6 to June 21:} \\
+Here I expect to deliver the refactored version
+of \texttt{cgraph\_node::expand()} and \texttt{expand\_all\_functions},
+splitting \texttt{IPA}, \texttt{GIMPLE} and \texttt{RTL} passes, plus
+some documentation about the global states of the \texttt{GIMPLE}
+passes.
+ \item{Week 8 - June 24 to 28:} \textbf{First Evaluation} \\
+Here I expect to deliver the refactored version of
+\texttt{cgraph\_node::expand()} and \texttt{expand\_all\_functions},
+plus some documentation about the global states of the \texttt{GIMPLE} passes.
+ \item{Week [9, 11] - July 1 to 19:} \\
+ Continue the documentation and refactor of the \texttt{GIMPLE} passes.
+ \item{Week 12 - July 22 to 26:} \\
+Attendance to Debconf 19 (Curitiba, Brazil). Please let me know
+if someone else from GCC will attend.
+ \item{Week 12 - July 22 to 26:} \textbf{Second Evaluation}\\
+Here I expect to deliver a
+working non-optimized parallel version of \texttt{expand\_all\_functions}.
+Here the point is not to perform better than the sequential version,
+but to still be correct in a multi-threaded environment.
+\item{Week [13, 15] - July 29 to August 19:} \\
+Iteractively improve the current implementation.
+\item{Week 16 - August 19:} \textbf{Final evaluation}\\
+Here I expect to have a
+better-optimized version of the function, with speedup over the sequential
+version when compiling \texttt{gimple-match.c} and reducing the total compilation time
+in \texttt{GCC} compilation without bootstrap.
+
+\end{itemize}
 
 \begin{figure}[ht]
  \centering
