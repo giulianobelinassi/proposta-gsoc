@@ -106,7 +106,8 @@ Date: \today
 I've submitted some patches, mainly adding inline optimizations to
 trigonometric functions. This kind of patch requires exaustive testing to guarantee
 that the optimization does not yield severely incorrect results. This work
-resulted in a blog post about the patch \textit{Optimize sin(arctan(x))}.
+resulted in a blog post\footnote{\url{https://flusp.ime.usp.br/gcc/2019/03/26/making-gcc-optimize-some-trigonometric-functions/}} 
+about the patch \textit{Optimize sin(arctan(x))}.
 I did this blog post both to register how to add this kind of optimization
 and also to encourage newcomers to contribute to GCC.
 
@@ -128,12 +129,13 @@ Name                                                                            
 
 \begin{section}{Parallelization Project}
 While looking for topics in the compiler field that touched subjects that I
-am interested in for the subject of my masters thesis, I found a
-parallelization project in GSoC 2018. With this in mind, I started a
+am interested for my masters thesis, I found a
+parallelization project proposed in GSoC 2018. With this in mind, I started a
 discussion in the mailing list to understand what that project is about,
 which was parallelizing GCC internals to be able to compile big files
 faster\footnote{\url{https://gcc.gnu.org/ml/gcc/2018-11/msg00073.html}}.
-This was way before the list of GSoC accepted organizations was made public.
+As can be seen in the discussion, I started to work on this subject way before
+the list of GSoC accepted organizations was made public.
 
 As stated in PR84402\footnote{\url{https://gcc.gnu.org/bugzilla/show\_bug.cgi?id=84402}},
 there is a parallelism bottleneck in GCC concerning huge files (with hundreds of
@@ -152,7 +154,7 @@ GNU Make to collect the data and a script to plot the graphic, which I used
 to reproduce the same behaviour in a 64-cores machine that is available at
 my university.
 
-Unfortunately, I found this approach not easy to reproduce, as
+Unfortunately, I found this approach not easy to replicate, as
 it requires compiling and installing a custom version of Make and generates
 gigabytes of data which require parsing by a script that often crashes, as
 it struggles to generate a very large SVG. With this in mind, I created a set of
@@ -192,27 +194,26 @@ GCC.
 I plan to use the GSoC time to develop the following topics:
 
 \begin{itemize}
- \item{Week [1, 6] -- May 6 to June 14:} \\
+ \item{Week [1, 7] -- May 6 to June 21:} \\
 Refactor \texttt{cgraph\_node::expand()} and
 \texttt{expand\_all\_functions}, splitting \texttt{IPA},
 \texttt{GIMPLE} and \texttt{RTL} passes, and some documentation about
 the global states of the \texttt{GIMPLE} passes.
  \item{Week 8 -- June 24 to 28:} \textbf{First Evaluation} \\
-Deliver the refactored version of \texttt{cgraph\_node::expand()} and
+Deliver a patch with the refactored version of \texttt{cgraph\_node::expand()} and
 \texttt{expand\_all\_functions}, and the partial documentation
-with regard to \texttt{GIMPLE}
+with regard to \texttt{GIMPLE}.
  \item{Week [9, 11] -- July 1 to 19:} \\
-Continue documentating and refactoring the \texttt{GIMPLE} passes.
- \item{Week 12 --- July 22 to 26:} \\
+Continue documentating and refactoring the \texttt{GIMPLE} passes, and
+prototype a parallelization of \texttt{expand\_all\_functions}.
+ \item{Week 12 --- July 22 to 26:} \textbf{Second Evaluation} \\
 Attend to Debconf 19 (Curitiba, Brazil). Please let me know
-if someone else from GCC will attend.
- \item{Week 12 --- July 22 to 26:} \textbf{Second Evaluation}\\
+if someone else from GCC will attend. \\
 Deliver a
 working non-optimized parallel version of \texttt{expand\_all\_functions}
 with the point of being correct in a multi-threaded environment.
 \item{Week [13, 15] --- July 29 to August 16:} \\
 Iteractively improve the current implementation.
-% TODO AEEEEEE!!!
 \item{Week 16 - August 19:} \textbf{Final evaluation}\\
 Optimize the current implementation, so that there is a speedup over
 the sequential version when compiling \texttt{gimple-match.c} and reducing the
