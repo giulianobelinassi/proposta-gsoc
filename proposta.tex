@@ -167,12 +167,12 @@ such huge files. I compiled GCC with the
 \texttt{--disable-checking} and \texttt{-O2} flags, which
 give a more performant (but less reliable) compiler and used this version to compile
 \texttt{gimple-match.c} (the largest file in GCC). In this context, I found that the method
-\texttt{finalize\_compilation\_unit} of
+\texttt{finalize\_compilation\_unit()} of
 class \texttt{symbol\_table} takes around $50s$ of the compilation time, with the
 \texttt{expand\_all\_functions}
 routine taking most of it. Therefore, this routine is a strong candidate for parallelization.
 
-Currently, my strategy to parallelize \texttt{expand\_all\_functions} is to
+Currently, my strategy to parallelize \texttt{expand\_all\_functions()} is to
 perform the \texttt{GIMPLE} processing step in parallel, as suggested
 by Richard Biener\footnote{\url{https://gcc.gnu.org/ml/gcc/2019-03/msg00249.html}}: each
 function may be independently processed by the many passes of
@@ -196,21 +196,20 @@ I plan to use the GSoC time to develop the following topics:
 \begin{itemize}
  \item{Week [1, 7] -- May 6 to June 21:} \\
 Refactor \texttt{cgraph\_node::expand()} and
-\texttt{expand\_all\_functions}, splitting \texttt{IPA},
+\texttt{expand\_all\_functions()}, splitting \texttt{IPA},
 \texttt{GIMPLE} and \texttt{RTL} passes, and some documentation about
 the global states of the \texttt{GIMPLE} passes.
  \item{Week 8 -- June 24 to 28:} \textbf{First Evaluation} \\
-Deliver a patch with the refactored version of \texttt{cgraph\_node::expand()} and
-\texttt{expand\_all\_functions}, and the partial documentation
-with regard to \texttt{GIMPLE}.
+Deliver a patch with the refactored version of both functions mentioned above,
+plus the partial documentation with regard to \texttt{GIMPLE}.
  \item{Week [9, 11] -- July 1 to 19:} \\
 Continue documentating and refactoring the \texttt{GIMPLE} passes, and
-prototype a parallelization of \texttt{expand\_all\_functions}.
+prototype a parallelization of \texttt{expand\_all\_functions()}.
  \item{Week 12 --- July 22 to 26:} \textbf{Second Evaluation} \\
 Attend to Debconf 19 (Curitiba, Brazil). Please let me know
 if someone else from GCC will attend. \\
 Deliver a
-working non-optimized parallel version of \texttt{expand\_all\_functions}
+working non-optimized parallel version of \texttt{expand\_all\_functions()}
 with the point of being correct in a multi-threaded environment.
 \item{Week [13, 15] --- July 29 to August 16:} \\
 Iteractively improve the current implementation.
