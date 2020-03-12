@@ -66,7 +66,7 @@
 
 \begin{center}
 \Huge \bf
-Parallelizing GCC with Threads
+Automatic Detection of Parallelization Viability
 \vspace{0.5cm}
 \end{center}
 \vspace*{\fill}
@@ -88,104 +88,62 @@ Date: \today
 \newpage
 
 \begin{section}{About Me}
-    Computer Science Bachelor (University of São Paulo), 
+    Computer Science Bachelor (University of São Paulo),
     currently pursuing a Masters Degree in Computer Science at the same
     institution. I've always been fascinated by topics such as
     High-Performance Computing and Code Optimization, having worked with
     a parallel implementation of a Boundary Elements Method software in GPU.
-    I am currently conducting research on compiler parallelization and,
-    therefore, a GSoC internship working with the GNU
-    Compiler Collection (GCC) on a related topic is an excellent opportunity
-    for me to become more involved with the Free Software community.
+    I am currently conducting research on compiler parallelization and
+    developing the \href{https://gcc.gnu.org/wiki/ParallelGcc}{ParallelGcc} project,
+    having already presented it in \href{https://www.youtube.com/watch?v=jd6R3IK\_\_1Q}{GNU Cauldron 2019}.
 
-    \textbf{Skills}: Strong knowledge in C, Concurrency, Shared Memory Parallelism, command line utilities (grep, sed\dots) and other typical programming tools.
+    \textbf{Skills}: Strong knowledge in C, Concurrency, Shared Memory Parallelism, Multithreaded Debugging and other typical programming tools.
 \end{section}
 
-\begin{subsection}{Contributions to GCC}
+\begin{section}{Brief Introduction}
 
-I've submitted some patches, mainly adding inline optimizations to
-trigonometric functions. This kind of patch requires exaustive testing to guarantee
-that the optimization does not yield severely incorrect results. This work
-resulted in a blog post\footnote{\url{https://flusp.ime.usp.br/gcc/2019/03/26/making-gcc-optimize-some-trigonometric-functions/}} 
-about the patch \textit{Optimize sin(arctan(x))}.
-I did this blog post both to register how to add this kind of optimization
-and also to encourage newcomers to contribute to GCC.
+In ParallelGcc, we showed that parallelizing the Intra Procedural optimizations
+improves speed when compiling huge files by a factor of 1.8x in a 4 cores
+machine. There, the compilation were parallelized with threads, and due to
+concurrency issues, it is still not merged into the main branch.
 
-\begin{table}[!htbp]
-\centering
-\begin{tabular}{|l|l|}
-\hline
-Name                                                                                      & Status   \\ \hline
-    \href{https://patchwork.ozlabs.org/patch/981596/}{Optimize $\sin (\arctan (x))$}      & \color{darkgreen}{\texttt{Accepted}} \\ \hline
-    \href{https://patchwork.ozlabs.org/patch/1003988/}{Optimize $\sinh (\text{arctanh} (x))$}   & \color{darkgreen}{\texttt{Accepted}} \\ \hline
-    \href{https://patchwork.ozlabs.org/patch/961362/}{Fix typo 'exapnded'}                & \color{darkgreen}{\texttt{Accepted}} \\ \hline
-    \href{https://en.wikibooks.org/wiki/LaTeX/Hyperlinks}{Split 'opt and gen' variable}   & \color{yelloworange}{\texttt{Working on}} \\ \hline
-    \href{https://patchwork.ozlabs.org/patch/1023211/}{Update $\sin (\arctan (x))$ test}  & \color{yelloworange}{\texttt{Waiting Stage1}} \\ \hline
-    \href{https://patchwork.ozlabs.org/patch/1046302/}{Fix PR89437}                           & Wilco Dijkstra version accepted \\ \hline
-\end{tabular}
-\end{table}
+In this project, however, we plan to use the LTO infrastructure to improve
+compilation performance, with a tradeoff of generating a binary as good as
+if LTO is disabled.
 
-\end{subsection}
+\begin{subsection}{Modification to LTO}
 
-\begin{section}{Parallelization Project}
-While looking for topics in the compiler field that touched subjects that I
-am interested for my masters thesis, I found a
-parallelization project proposed in GSoC 2018. With this in mind, I started a
-discussion in the mailing list to understand what that project is about,
-which was parallelizing GCC internals to be able to compile big files
-faster\footnote{\url{https://gcc.gnu.org/ml/gcc/2018-11/msg00073.html}}.
-As can be seen in the discussion, I started to work on this subject way before
-the list of GSoC accepted organizations was made public.
+The Link Time Optimization (LTO) is a compilation technique that allows the
+compiler to analyse the program as a whole, instead of analysing and compiling
+one file at time. Therefore, LTO is able to collect more information about
+the program and generate a better optimization plan. LTO is divided in three
+parts:
 
-As stated in PR84402\footnote{\url{https://gcc.gnu.org/bugzilla/show\_bug.cgi?id=84402}},
-there is a parallelism bottleneck in GCC concerning huge files (with hundreds of
-thousands of lines of code). In the course of the discussion,
-Bin Cheng\footnote{\url{https://gcc.gnu.org/ml/gcc/2018-12/msg00079.html}}
-reported that
-he is affected by this issue, stating that parallelizing the
-compiler may solve his problem. These discussions demonstrate the
-community interest in this project.
+\begin{itemize}
+    \item \emph{LGEN (Local Generation)}: Each file is translated to GIMPLE. This
+        stage runs in parallel in each file.
 
-\begin{subsection}{Current Status}
-In PR84402, Martin Liška posted a graphic showing the existence of a
-parallelism bottleneck in GCC compilation due to huge files such as
-\texttt{gimple-match.c} in a 128-cores machine that \texttt{make -j128} alone could not alleviate. He also posted an amazing patch to
-GNU Make to collect the data and a script to plot the graphic, which I used
-to reproduce the same behaviour in a 64-cores machine that is available at
-my university.
+    \item \emph{WPA (Whole Program Analysis)}: Run the Inter Procedural Analysis (IPA) in the
+        entire program. This state runs serially.
 
-Unfortunately, I found this approach not easy to replicate, as
-it requires compiling and installing a custom version of Make and generates
-gigabytes of data which require parsing by a script that often crashes, as
-it struggles to generate a very large SVG. With this in mind, I created a set of
-tools\footnote{\url{https://github.com/giulianobelinassi/gcc-timer-analysis}}
-using a completely distinct approach, which generates less data, is more stable, and
-plots better graphics, such as the one in Figure \ref{fig:analysis}.
+    \item \emph{LTRANS (Local Transformation)}: Execute all Intra Procedural Optimizations in
+        each partition. This stage runs in parallel.
+\end{itemize}
 
-I also explored the GCC codebase in order to find the performance bottleneck for
-such huge files. I compiled GCC with the
-\texttt{--disable-checking} and \texttt{-O2} flags, which
-give a more performant (but less reliable) compiler and used this version to compile
-\texttt{gimple-match.c} (the largest file in GCC). In this context, I found that the method
-\texttt{finalize\_compilation\_unit()} of
-class \texttt{symbol\_table} takes around $50s$ of the compilation time, with the
-\texttt{expand\_all\_functions}
-routine taking most of it. Therefore, this routine is a strong candidate for parallelization.
+The main issue here is that WPA can bottleneck the compilation in a many-core
+machine because this runs serially, and therefore it can not take advantage of
+all these extra cores. In this project, we aim to run the WPA stage in parallel
+to each file, just like it is done when LTO is disabled. The advantage of doing
+this way is that:
 
-Currently, my strategy to parallelize \texttt{expand\_all\_functions()} is to
-perform the \texttt{GIMPLE} processing step in parallel, as suggested
-by Richard Biener\footnote{\url{https://gcc.gnu.org/ml/gcc/2019-03/msg00249.html}}: each
-function may be independently processed by the many passes of
-\texttt{GIMPLE}.  There is also a pipelined alternative: a distinct
-thread is responsible for a given \texttt{GIMPLE} pass and each
-function is fed sequentially to each of them. This allows many
-functions to be processed simultaneously, each by a different pass.
+\begin{itemize}
 
-Furthermore, I am also studying the theoretical background behind \texttt{GIMPLE}
-and \texttt{cgraphs}. I have read the \texttt{GIMPLE}
-documentation\footnote{\url{https://gcc.gnu.org/onlinedocs/gccint/}} and
-I am looking at how \texttt{cgraph} works internally, both in theory and within
-GCC.
+    \item It can generate binaries as good as when LTO is disabled.
+    \item It is faster, as we can partition big files into multiple partitions
+    and compile these partitions in parallel
+    \item It can interact with GNU Make Jobserver, improving CPU utilization.
+
+\end{itemize}
 
 \end{subsection}
 
@@ -194,38 +152,50 @@ GCC.
 I plan to use the GSoC time to develop the following topics:
 
 \begin{itemize}
- \item{Week [1, 7] -- May 6 to June 21:} \\
-Refactor \texttt{cgraph\_node::expand()} and
-\texttt{expand\_all\_functions()}, splitting \texttt{IPA},
-\texttt{GIMPLE} and \texttt{RTL} passes, and some documentation about
-the global states of the \texttt{GIMPLE} passes.
- \item{Week 8 -- June 24 to 28:} \textbf{First Evaluation} \\
-Deliver a patch with the refactored version of both functions mentioned above,
-plus the partial documentation with regard to \texttt{GIMPLE}.
- \item{Week [9, 11] -- July 1 to 19:} \\
-Continue documentating and refactoring the \texttt{GIMPLE} passes, and
-prototype a parallelization of \texttt{expand\_all\_functions()}.
- \item{Week 12 --- July 22 to 26:} \textbf{Second Evaluation} \\
-Attend to Debconf 19 (Curitiba, Brazil). Please let me know
-if someone else from GCC will attend. \\
-Deliver a
-working non-optimized parallel version of \texttt{expand\_all\_functions()}
-with the point of being correct in a multi-threaded environment.
-\item{Week [13, 15] --- July 29 to August 16:} \\
-Iteractively improve the current implementation.
-\item{Week 16 - August 19:} \textbf{Final evaluation}\\
-Optimize the current implementation, so that there is a speedup over
-the sequential version when compiling \texttt{gimple-match.c} and reducing the
-total compilation time in \texttt{GCC} compilation without bootstrap.
+ \item{Week [1, 3] -- April 27 to May 15:} \\
+
+  Update cc1, cc1plus, f771, ..., to partition the data after IPA
+  analysis directly into multiple LTRANS partitions, instead of
+  generating a temporary GIMPLE file.
+
+
+ \item{Week [4, 7] -- May 18 to June 12:} \\
+
+  Update the 'gcc' driver to take these multiple LTRANS partitions,
+  then call the compiler and assembler for each of them, and merge into
+  one object file. I might use the LTO LTRANS object streaming, therefore
+  it should interact with GNU Make Jobserver.
+
+ \item{Week 8 -- June 15 to 19:} \textbf{First Evaluation} \\
+
+  Deliver a non-optimized version of the project. Here, it should
+  be compiling some programs correctly, but probably there will be
+  a huge overhead because so far there should not be any criteria
+  about when to partitionate. Some tests are also planned for this
+  evaluation.
+
+ \item{Week [9, 11] -- June 22 to July 10:} \\
+
+  Implement a criteria about when to partition, and interactively
+  improve it based on data.
+
+ \item{Week 12 --- July 13 to 17:} \textbf{Second Evaluation} \\
+
+  Deliver a more optimized version of the project. Here we should
+  filter files that would compile fast from files that would require
+  partitioning, and therefore we should see some speedup.
+
+\item{Week [13, 15] --- July 20 to August 10:} \\
+
+  Develop more tests to this feature, and address unexpected issues
+  so that this feature can be merged to trunk for the next GCC
+  release.
+
+\item{Week 16:} \textbf{Final evaluation}\\
+  Deliver the final product as a series of patches for trunk.
+
+
 \end{itemize}
-
-\begin{figure}[ht]
- \centering
- \includegraphics[scale=0.6, angle=-90]{out-crop.pdf}
- \caption{Elapsed time analysis in GCC compilation for a 64 cores machine, No bootstrap}
- \label{fig:analysis}
-\end{figure}
-
 \end{subsection}
 
 \end{section}
