@@ -66,13 +66,13 @@
 
 \begin{center}
 \Huge \bf
-Automatic Detection of Parallelization Viability
+Automatic Detection of Parallel Compilation Viability
 \vspace{0.5cm}
 \end{center}
 \vspace*{\fill}
 {
      \centering
-     \includegraphics[scale=0.7]{logo.pdf}
+     \includegraphics[scale=1.0]{logo.pdf}
     \par
 }
 \vspace*{\fill}
@@ -97,21 +97,23 @@ Date: \today
     developing the \href{https://gcc.gnu.org/wiki/ParallelGcc}{ParallelGcc} project,
     having already presented it in \href{https://www.youtube.com/watch?v=jd6R3IK\_\_1Q}{GNU Cauldron 2019}.
 
-    \textbf{Skills}: Strong knowledge in C, Concurrency, Shared Memory Parallelism, Multithreaded Debugging and other typical programming tools.
+    \textbf{Skills}: Strong knowledge in C, Concurrency, Shared Memory
+    Parallelism, Multithreaded Debugging and other typical programming tools.
 \end{section}
 
 \begin{section}{Brief Introduction}
 
-In ParallelGcc, we showed that parallelizing the Intra Procedural optimizations
+In \href{https://gcc.gnu.org/wiki/ParallelGcc}{ParallelGcc}, we showed that parallelizing the Intra Procedural optimizations
 improves speed when compiling huge files by a factor of 1.8x in a 4 cores
-machine. There, the compilation were parallelized with threads, and due to
-concurrency issues, it is still not merged into the main branch.
+    machine, and also showed that this takes 75\% of compilation time.
 
-In this project, however, we plan to use the LTO infrastructure to improve
-compilation performance, with a tradeoff of generating a binary as good as
-if LTO is disabled.
+In this project we plan to use the LTO infrastructure to improve
+compilation performance in the non-LTO case, with a tradeoff of generating
+a binary as good as if LTO is disabled. Here, we will automatically detect
+when a single file will benefit from parallelism, and procceed with the
+compilation in parallel if so.
 
-\begin{subsection}{Modification to LTO}
+\begin{section}{Use of LTO}
 
 The Link Time Optimization (LTO) is a compilation technique that allows the
 compiler to analyse the program as a whole, instead of analysing and compiling
@@ -121,73 +123,91 @@ parts:
 
 \begin{itemize}
     \item \emph{LGEN (Local Generation)}: Each file is translated to GIMPLE. This
-        stage runs in parallel in each file.
+        stage runs sequentially in each file and, therefore, in parallel in
+        the project compilation.
 
     \item \emph{WPA (Whole Program Analysis)}: Run the Inter Procedural Analysis (IPA) in the
-        entire program. This state runs serially.
+        entire program. This state runs serially in the project.
 
     \item \emph{LTRANS (Local Transformation)}: Execute all Intra Procedural Optimizations in
         each partition. This stage runs in parallel.
 \end{itemize}
 
-The main issue here is that WPA can bottleneck the compilation in a many-core
-machine because this runs serially, and therefore it can not take advantage of
-all these extra cores. In this project, we aim to run the WPA stage in parallel
-to each file, just like it is done when LTO is disabled. The advantage of doing
-this way is that:
+Since WPA can bottleneck the compilation because it runs serially in the entire
+project, LTO was designed to produce faster binaries, not to produce binaries
+fast.
 
+Here, the proposed use of LTO to address this problem is to run the IPA
+for each Translation Unit (TU), instead in the Whole Program, and automatically
+detect when to partition the TU into multiple LTRANS to improve compilation performance.
+The advantage of this approach is:
 \begin{itemize}
 
     \item It can generate binaries as good as when LTO is disabled.
     \item It is faster, as we can partition big files into multiple partitions
-    and compile these partitions in parallel
+    and compile these partitions in parallel.
     \item It can interact with GNU Make Jobserver, improving CPU utilization.
 
 \end{itemize}
 
-\end{subsection}
+\end{section}
 
-\begin{subsection}{Planned Tasks}
+\begin{section}{Planned Tasks}
 
 I plan to use the GSoC time to develop the following topics:
 
 \begin{itemize}
  \item{Week [1, 3] -- April 27 to May 15:} \\
+  Update \texttt{cc1}, \texttt{cc1plus}, \texttt{f771}, \ldots, to partition
+  the Compilation Unit (CU) after IPA analysis directly into multiple LTRANS
+  partitions, instead of generating a temporary GIMPLE file, and to accept a
+  additional parameter \texttt{-fsplit-outputs=<tempfile>}, in which the
+  generated ASM filenames will be written to.
 
-  Update cc1, cc1plus, f771, ..., to partition the data after IPA
-  analysis directly into multiple LTRANS partitions, instead of
-  generating a temporary GIMPLE file.
+  There are two possible cases in which I could work on:
+  \begin{enumerate}
+    \item \textit{Fork}: After the CU is partitioned into multiple LTRANS, then
+    \texttt{cc1} will fork and compile these partitions, each of them
+    generating a ASM file, and write the generated asm name into
+    \texttt{<tempfile>}.  Note that if the number of partitions is one, then
+    this part is not necessary.
 
+    \item \textit{Stream LTRANS IR}: After CU is partitionated into multiple
+    LTRANS, then \texttt{cc1} will write these partitions into disk so that LTO
+    can read these files and proceed as a standard LTO operation in order to
+    generate a partially linked object file.
+  \end{enumerate}
+
+  1. Has the advantage of having less overhead than 2., as there is less IO operations,
+  however it may be hard to implement as the assembler file may be already
+  opened before forking, so caution is necessary to make sure that there are a
+  1 - 1 relationship between assembler file and the compilation process. 2.
+  on the other hand can easily interact with the GNU jobserver.
 
  \item{Week [4, 7] -- May 18 to June 12:} \\
-
-  Update the 'gcc' driver to take these multiple LTRANS partitions,
-  then call the compiler and assembler for each of them, and merge into
-  one object file. I might use the LTO LTRANS object streaming, therefore
-  it should interact with GNU Make Jobserver.
+  Update the \texttt{gcc} driver to take each file in \texttt{<tempfile>}, then
+  assemble and partially link them together. Here, an important optimization is
+  to use a named pipe in \texttt{<tempfile>} to avoid having to wait every
+  partition to end its compilation before assembling the files.
 
  \item{Week 8 -- June 15 to 19:} \textbf{First Evaluation} \\
-
-  Deliver a non-optimized version of the project. Here, it should
-  be compiling some programs correctly, but probably there will be
-  a huge overhead because so far there should not be any criteria
-  about when to partitionate. Some tests are also planned for this
-  evaluation.
+  Deliver a non-optimized version of the project. Some programs ought to be
+  compiled correctly, but probably there will be a huge overhead because so far
+  there is no way of interacting with GNU Jobserver.
 
  \item{Week [9, 11] -- June 22 to July 10:} \\
-
-  Implement a criteria about when to partition, and interactively
-  improve it based on data.
+  Work on GNU Make Jobserver integration. A way of doing this is to adapt
+  the LTO WPA $\rightarrow$ LTRANS way of interacting with Jobserver. Another
+  way is to make the forked \texttt{cc1} consume Jobserver tokens until the
+  compilation finishes, then return the token when done.
 
  \item{Week 12 --- July 13 to 17:} \textbf{Second Evaluation} \\
-
-  Deliver a more optimized version of the project. Here we should
-  filter files that would compile fast from files that would require
-  partitioning, and therefore we should see some speedup.
+  Deliver a more optimized version of the project. Here we should filter files
+  that would compile fast from files that would require partitioning, and
+  interact with GNU Jobserver. Therefore we should see some speedup.
 
 \item{Week [13, 15] --- July 20 to August 10:} \\
-
-  Develop more tests to this feature, and address unexpected issues
+  Develop adequate tests coverage and address unexpected issues
   so that this feature can be merged to trunk for the next GCC
   release.
 
@@ -196,7 +216,7 @@ I plan to use the GSoC time to develop the following topics:
 
 
 \end{itemize}
-\end{subsection}
+\end{section}
 
 \end{section}
 \end{document}
