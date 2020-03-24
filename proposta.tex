@@ -140,7 +140,15 @@ fast.
 Here, the proposed use of LTO to address this problem is to run the IPA
 for each Translation Unit (TU), instead in the Whole Program, and automatically
 detect when to partition the TU into multiple LTRANS to improve compilation performance.
-The advantage of this approach is:
+
+The advantage of this approach is: by partitioning big files into multiple
+partitions, we can improve the compilation performance by exposing these
+partitions to the Jobserver. Therefore, it can improve CPU utilization in
+manycore machines.  Generated code quality should be unaffected by this
+procedure, which means that it should run as fast as when LTO is disabled.
+
+
+
 \begin{itemize}
 
     \item It can generate binaries as good as when LTO is disabled.
@@ -157,7 +165,7 @@ The advantage of this approach is:
 I plan to use the GSoC time to develop the following topics:
 
 \begin{itemize}
- \item{Week [1, 3] -- April 27 to May 15:} \\
+ \item{Week [1, 4] -- May 4 to May 27:} \\
   Update \texttt{cc1}, \texttt{cc1plus}, \texttt{f771}, \ldots, to partition
   the Compilation Unit (CU) after IPA analysis directly into multiple LTRANS
   partitions, instead of generating a temporary GIMPLE file, and to accept a
@@ -184,34 +192,34 @@ I plan to use the GSoC time to develop the following topics:
   1 - 1 relationship between assembler file and the compilation process. 2.
   on the other hand can easily interact with the GNU jobserver.
 
- \item{Week [4, 7] -- May 18 to June 12:} \\
+ \item{Week [5, 8] -- June 1 to June 26:} \\
   Update the \texttt{gcc} driver to take each file in \texttt{<tempfile>}, then
   assemble and partially link them together. Here, an important optimization is
   to use a named pipe in \texttt{<tempfile>} to avoid having to wait every
   partition to end its compilation before assembling the files.
 
- \item{Week 8 -- June 15 to 19:} \textbf{First Evaluation} \\
+ \item{Week 9 -- June 29 to July 3:} \textbf{First Evaluation} \\
   Deliver a non-optimized version of the project. Some programs ought to be
   compiled correctly, but probably there will be a huge overhead because so far
   there is no way of interacting with GNU Jobserver.
 
- \item{Week [9, 11] -- June 22 to July 10:} \\
+ \item{Week [10, 12] -- July 6 to July 24:} \\
   Work on GNU Make Jobserver integration. A way of doing this is to adapt
   the LTO WPA $\rightarrow$ LTRANS way of interacting with Jobserver. Another
   way is to make the forked \texttt{cc1} consume Jobserver tokens until the
   compilation finishes, then return the token when done.
 
- \item{Week 12 --- July 13 to 17:} \textbf{Second Evaluation} \\
+ \item{Week 13 -- July 27 to 31:} \textbf{Second Evaluation} \\
   Deliver a more optimized version of the project. Here we should filter files
   that would compile fast from files that would require partitioning, and
   interact with GNU Jobserver. Therefore we should see some speedup.
 
-\item{Week [13, 15] --- July 20 to August 10:} \\
+\item{Week [14, 16] -- August 3 to 21:} \\
   Develop adequate tests coverage and address unexpected issues
   so that this feature can be merged to trunk for the next GCC
   release.
 
-\item{Week 16:} \textbf{Final evaluation}\\
+\item{Week 17: August 24 to 31} \textbf{Final evaluation}\\
   Deliver the final product as a series of patches for trunk.
 
 
